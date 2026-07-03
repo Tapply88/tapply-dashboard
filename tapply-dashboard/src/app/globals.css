@@ -1,0 +1,68 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  background: #F7F6F2;
+}
+
+body {
+  color: #1A1A1A;
+}
+
+/* Signature element: dashboard stat cards styled like a torn receipt —
+   dashed edges, monospace figures, printed-label caps. Grounds the UI
+   in the physical POS receipts the product actually produces. */
+.receipt-card {
+  background: #FFFFFF;
+  border: 1px solid #E8E8E6;
+  border-radius: 14px;
+  position: relative;
+  padding: 20px 22px;
+}
+
+.receipt-card::before,
+.receipt-card::after {
+  content: '';
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  height: 0;
+  border-top: 1.5px dashed #CFCFCF;
+}
+
+.receipt-card::before {
+  top: 0;
+}
+
+.receipt-card::after {
+  bottom: 0;
+}
+
+.figure {
+  font-family: var(--font-mono), monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.label-eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #6B6B6B;
+  font-weight: 600;
+}
+
+/* Focus visibility */
+:focus-visible {
+  outline: 2px solid #092762;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
