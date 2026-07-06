@@ -1,3 +1,36 @@
+cat > src/app/page.tsx << 'PAGEEOF'
+import Link from 'next/link';
+import Image from 'next/image';
+
+export default function LandingPage() {
+  return (
+    <main className="min-h-screen flex flex-col items-center justify-center px-6">
+      <div className="max-w-md w-full text-center">
+        <Image src="/logo.png" alt="Tapply" width={220} height={72} className="mx-auto mb-3" priority />
+        <p className="text-ink/60 mb-10">
+          Satu tempat buat pantau semua kedai kamu yang pakai Tapply POS.
+        </p>
+        <div className="flex flex-col gap-3">
+          <Link
+            href="/login"
+            className="w-full rounded-full bg-navy text-white py-3 font-medium hover:bg-navy-soft transition-colors"
+          >
+            Masuk
+          </Link>
+          <Link
+            href="/signup"
+            className="w-full rounded-full border border-navy text-navy py-3 font-medium hover:bg-navy-50 transition-colors"
+          >
+            Daftar Bisnis Baru
+          </Link>
+        </div>
+      </div>
+    </main>
+  );
+}
+PAGEEOF
+
+cat > src/components/Sidebar.tsx << 'SIDEBAREOF'
 'use client';
 
 import Link from 'next/link';
@@ -55,3 +88,6 @@ export function Sidebar() {
     </aside>
   );
 }
+SIDEBAREOF
+
+echo 'Selesai. Jangan lupa taro logo.png ke folder public/ juga (file terpisah). Restart: npm run dev'

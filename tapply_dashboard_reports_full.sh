@@ -1,12 +1,10 @@
+cat > src/app/dashboard/page.tsx << 'DASHEOF'
 'use client';
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { ReceiptStatCard } from '@/components/ReceiptStatCard';
-import { useI18n } from '@/lib/i18n';
-import { isProActive, type PlanInfo } from '@/lib/plan';
-import { UpgradeLock } from '@/components/UpgradeLock';
 
 type Period = 'today' | 'week' | 'month' | 'custom';
 
@@ -49,7 +47,6 @@ const CHART_RUST = '#B54834';
 
 export default function DashboardHomePage() {
   const supabase = createClient();
-  const { t } = useI18n();
   const [businessName, setBusinessName] = useState('');
   const [period, setPeriod] = useState<Period>('today');
   const [customFrom, setCustomFrom] = useState(toDateInputValue(new Date(Date.now() - 6 * 86400000)));
@@ -59,8 +56,6 @@ export default function DashboardHomePage() {
   const [products, setProducts] = useState<ProductInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [planInfo, setPlanInfo] = useState<PlanInfo | null>(null);
-  const isPro = isProActive(planInfo);
 
   const range = useMemo(() => {
     if (period === 'custom') {
@@ -135,11 +130,8 @@ export default function DashboardHomePage() {
       if (!user) return;
       const { data: link } = await supabase.from('business_users').select('business_id').eq('user_id', user.id).single();
       if (!link) return;
-      const { data: business } = await supabase.from('businesses').select('name, plan, plan_expires_at').eq('id', link.business_id).single();
-      if (business) {
-        setBusinessName(business.name);
-        setPlanInfo({ plan: business.plan, plan_expires_at: business.plan_expires_at });
-      }
+      const { data: business } = await supabase.from('businesses').select('name').eq('id', link.business_id).single();
+      if (business) setBusinessName(business.name);
     }
     loadBusiness();
   }, [supabase]);
@@ -190,47 +182,23 @@ export default function DashboardHomePage() {
     .map(([date, total]) => ({ date: date.slice(5), total }))
     .sort((a, b) => (a.date > b.date ? 1 : -1));
 
-  function exportCsv() {
-    const header = 'Date,Payment Method,Items,Total\n';
-    const rows = transactions
-      .map((t) => {
-        const itemsSummary = (t.items ?? []).map((i) => `${i.productName} x${i.qty}`).join('; ');
-        const date = new Date(t.created_at).toLocaleString('id-ID');
-        return `"${date}","${t.payment_method}","${itemsSummary.replace(/"/g, "'")}",${t.total}`;
-      })
-      .join('\n');
-    const blob = new Blob([header + rows], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `tapply-sales-${toDateInputValue(range.from)}-to-${toDateInputValue(range.to)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
   return (
     <div>
       <p className="label-eyebrow mb-2">{businessName || 'Ringkasan'}</p>
-      <h1 className="text-2xl font-semibold mb-6">{t('sales_report')}</h1>
+      <h1 className="text-2xl font-semibold mb-6">Laporan Penjualan</h1>
 
       <div className="flex flex-wrap items-center gap-2 mb-8">
-        {(['today', 'week', 'month', 'custom'] as Period[]).map((p) => {
-          const locked = p !== 'today' && !isPro;
-          return (
-            <button
-              key={p}
-              onClick={() => (locked ? undefined : setPeriod(p))}
-              disabled={locked}
-              title={locked ? 'Upgrade to Pro to view this period' : undefined}
-              className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-                period === p ? 'bg-navy text-white' : 'border border-grey text-navy hover:bg-navy-50'
-              } ${locked ? 'opacity-40 cursor-not-allowed' : ''}`}
-            >
-              {p === 'today' ? t('today') : p === 'week' ? t('seven_days') : p === 'month' ? t('thirty_days') : t('pick_period')}
-              {locked && ' 🔒'}
-            </button>
-          );
-        })}
+        {(['today', 'week', 'month', 'custom'] as Period[]).map((p) => (
+          <button
+            key={p}
+            onClick={() => setPeriod(p)}
+            className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+              period === p ? 'bg-navy text-white' : 'border border-grey text-navy hover:bg-navy-50'
+            }`}
+          >
+            {p === 'today' ? 'Hari Ini' : p === 'week' ? '7 Hari' : p === 'month' ? '30 Hari' : 'Pilih Periode'}
+          </button>
+        ))}
         {period === 'custom' && (
           <div className="flex items-center gap-2 ml-2">
             <input
@@ -248,14 +216,6 @@ export default function DashboardHomePage() {
             />
           </div>
         )}
-        <button
-          onClick={exportCsv}
-          disabled={transactions.length === 0 || !isPro}
-          title={!isPro ? 'Upgrade to Pro to export' : undefined}
-          className="ml-auto rounded-full border border-navy text-navy px-4 py-2 text-sm font-medium hover:bg-navy-50 transition-colors disabled:opacity-40"
-        >
-          {t('export_csv')}
-        </button>
       </div>
 
       {error && (
@@ -270,50 +230,44 @@ export default function DashboardHomePage() {
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-10">
             <ReceiptStatCard
-              label={t('total_sales')}
+              label="Total Penjualan"
               value={formatRupiah(totalRevenue)}
               sublabel={
-                revenueChangePct === null || !isPro
+                revenueChangePct === null
                   ? `${txCount} transaksi`
                   : `${revenueChangePct >= 0 ? '+' : ''}${revenueChangePct.toFixed(0)}% dari periode sebelumnya • ${txCount} transaksi`
               }
-              accent={isPro && revenueChangePct !== null && revenueChangePct < 0 ? 'rust' : 'navy'}
+              accent={revenueChangePct !== null && revenueChangePct < 0 ? 'rust' : 'navy'}
             />
             <ReceiptStatCard
-              label={t('avg_per_transaction')}
+              label="Rata-rata per Transaksi"
               value={formatRupiah(txCount > 0 ? Math.round(totalRevenue / txCount) : 0)}
               accent="sage"
             />
           </div>
 
-          {isPro ? (
-            <div className="receipt-card mb-8">
-              <p className="label-eyebrow mb-4">{t('daily_sales_trend')}</p>
-              {dailyTrend.length < 2 ? (
-                <p className="text-sm text-ink/50">Butuh minimal 2 hari data buat nampilin tren.</p>
-              ) : (
-                <ResponsiveContainer width="100%" height={220}>
-                  <LineChart data={dailyTrend}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                    <YAxis tickFormatter={(v) => formatRupiah(v)} tick={{ fontSize: 10 }} width={70} />
-                    <Tooltip formatter={(v: number) => [formatRupiah(v), 'Penjualan']} />
-                    <Line type="monotone" dataKey="total" stroke={CHART_NAVY} strokeWidth={2} dot={{ r: 3 }} />
-                  </LineChart>
-                </ResponsiveContainer>
-              )}
-            </div>
-          ) : (
-            <div className="mb-8">
-              <UpgradeLock feature="Daily sales trends & period comparison" />
-            </div>
-          )}
+          <div className="receipt-card mb-8">
+            <p className="label-eyebrow mb-4">Tren Penjualan Harian</p>
+            {dailyTrend.length < 2 ? (
+              <p className="text-sm text-ink/50">Butuh minimal 2 hari data buat nampilin tren.</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={220}>
+                <LineChart data={dailyTrend}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                  <YAxis tickFormatter={(v) => formatRupiah(v)} tick={{ fontSize: 10 }} width={70} />
+                  <Tooltip formatter={(v: number) => [formatRupiah(v), 'Penjualan']} />
+                  <Line type="monotone" dataKey="total" stroke={CHART_NAVY} strokeWidth={2} dot={{ r: 3 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
+          </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
             <div className="receipt-card">
-              <p className="label-eyebrow mb-4">{t('best_selling_products')}</p>
+              <p className="label-eyebrow mb-4">Produk Terlaris (jumlah unit)</p>
               {topProducts.length === 0 ? (
-                <p className="text-sm text-ink/50">{t('no_transactions_period')}</p>
+                <p className="text-sm text-ink/50">Belum ada transaksi di periode ini.</p>
               ) : (
                 <ResponsiveContainer width="100%" height={Math.max(200, topProducts.length * 34)}>
                   <BarChart data={topProducts} layout="vertical" margin={{ left: 20 }}>
@@ -328,9 +282,9 @@ export default function DashboardHomePage() {
             </div>
 
             <div className="receipt-card">
-              <p className="label-eyebrow mb-4">{t('sales_by_payment')}</p>
+              <p className="label-eyebrow mb-4">Penjualan per Metode Bayar</p>
               {paymentData.length === 0 ? (
-                <p className="text-sm text-ink/50">{t('no_transactions_period')}</p>
+                <p className="text-sm text-ink/50">Belum ada transaksi di periode ini.</p>
               ) : (
                 <ResponsiveContainer width="100%" height={Math.max(200, paymentData.length * 40)}>
                   <BarChart data={paymentData} layout="vertical" margin={{ left: 20 }}>
@@ -345,28 +299,27 @@ export default function DashboardHomePage() {
             </div>
           </div>
 
-          {isPro ? (
-            <div className="receipt-card">
-              <p className="label-eyebrow mb-4">{t('sales_by_category')}</p>
-              {categoryData.length === 0 ? (
-                <p className="text-sm text-ink/50">{t('no_transactions_period')}</p>
-              ) : (
-                <ResponsiveContainer width="100%" height={Math.max(160, categoryData.length * 40)}>
-                  <BarChart data={categoryData} layout="vertical" margin={{ left: 20 }}>
-                    <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                    <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
-                    <YAxis type="category" dataKey="category" width={100} tick={{ fontSize: 11 }} />
-                    <Tooltip formatter={(v: number) => [`${v} unit`, 'Terjual']} />
-                    <Bar dataKey="qty" fill={CHART_RUST} radius={[0, 4, 4, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
-            </div>
-          ) : (
-            <UpgradeLock feature="Sales by category" />
-          )}
+          <div className="receipt-card">
+            <p className="label-eyebrow mb-4">Penjualan per Kategori (jumlah unit)</p>
+            {categoryData.length === 0 ? (
+              <p className="text-sm text-ink/50">Belum ada transaksi di periode ini.</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={Math.max(160, categoryData.length * 40)}>
+                <BarChart data={categoryData} layout="vertical" margin={{ left: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                  <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
+                  <YAxis type="category" dataKey="category" width={100} tick={{ fontSize: 11 }} />
+                  <Tooltip formatter={(v: number) => [`${v} unit`, 'Terjual']} />
+                  <Bar dataKey="qty" fill={CHART_RUST} radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
         </>
       )}
     </div>
   );
 }
+DASHEOF
+
+echo 'Selesai. Restart: Ctrl+C lalu npm run dev'

@@ -1,16 +1,21 @@
+cat > supabase/migration_011_business_logo.sql << 'MIGEOF'
+-- Migration: logo bisnis disimpen sebagai base64 (konsisten sama foto produk),
+-- biar gampang dipull ke app Flutter dan ditampilin di struk.
+alter table businesses
+  add column if not exists logo_base64 text;
+MIGEOF
+
+cat > src/app/dashboard/settings/page.tsx << 'SETEOF'
 'use client';
 
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useI18n } from '@/lib/i18n';
-import { hashPin } from '@/lib/hash';
-import { planLabel, daysRemaining, type PlanInfo } from '@/lib/plan';
 
 export default function SettingsPage() {
   const supabase = createClient();
   const { t, lang, setLang } = useI18n();
   const [businessId, setBusinessId] = useState<string | null>(null);
-  const [planInfo, setPlanInfo] = useState<PlanInfo | null>(null);
   const [syncApiKey, setSyncApiKey] = useState<string>('');
   const [form, setForm] = useState({
     name: '',
@@ -22,14 +27,11 @@ export default function SettingsPage() {
     discount_percent: '0',
     rounding_enabled: false,
     rounding_nearest: '100',
-    manager_pin: '',
+    manager_pin: '1234',
     pin_required_for_cancel: true,
     print_check_enabled: true,
     queue_number_enabled: false,
     queue_start_number: '1',
-    points_redemption_value: '100',
-    points_redemption_multiple: '300',
-    points_earn_rate: '1000',
     logo_base64: '' as string | null,
   });
   const [saved, setSaved] = useState(false);
@@ -48,7 +50,6 @@ export default function SettingsPage() {
       const { data: business } = await supabase.from('businesses').select('*').eq('id', link.business_id).single();
       if (business) {
         setBusinessId(business.id);
-        setPlanInfo({ plan: business.plan, plan_expires_at: business.plan_expires_at });
         setSyncApiKey(business.sync_api_key ?? '');
         setForm({
           name: business.name ?? '',
@@ -60,14 +61,11 @@ export default function SettingsPage() {
           discount_percent: String(business.discount_percent ?? 0),
           rounding_enabled: business.rounding_enabled ?? false,
           rounding_nearest: String(business.rounding_nearest ?? 100),
-          manager_pin: '',
+          manager_pin: business.manager_pin ?? '1234',
           pin_required_for_cancel: business.pin_required_for_cancel ?? true,
           print_check_enabled: business.print_check_enabled ?? true,
           queue_number_enabled: business.queue_number_enabled ?? false,
           queue_start_number: String(business.queue_start_number ?? 1),
-          points_redemption_value: String(business.points_redemption_value ?? 100),
-          points_redemption_multiple: String(business.points_redemption_multiple ?? 300),
-          points_earn_rate: String(business.points_earn_rate ?? 1000),
           logo_base64: business.logo_base64,
         });
       }
@@ -99,29 +97,26 @@ export default function SettingsPage() {
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     if (!businessId) return;
-    const payload: Record<string, unknown> = {
-      name: form.name,
-      address: form.address,
-      phone: form.phone,
-      footer_text: form.footer_text,
-      tax_percent: Number(form.tax_percent) || 0,
-      service_percent: Number(form.service_percent) || 0,
-      discount_percent: Number(form.discount_percent) || 0,
-      rounding_enabled: form.rounding_enabled,
-      rounding_nearest: Number(form.rounding_nearest) || 100,
-      pin_required_for_cancel: form.pin_required_for_cancel,
-      print_check_enabled: form.print_check_enabled,
-      queue_number_enabled: form.queue_number_enabled,
-      queue_start_number: Number(form.queue_start_number) || 1,
-      points_redemption_value: Number(form.points_redemption_value) || 100,
-      points_redemption_multiple: Number(form.points_redemption_multiple) || 300,
-      points_earn_rate: Number(form.points_earn_rate) || 1000,
-      logo_base64: form.logo_base64 || null,
-    };
-    if (form.manager_pin.trim()) {
-      payload.manager_pin = await hashPin(form.manager_pin.trim());
-    }
-    await supabase.from('businesses').update(payload).eq('id', businessId);
+    await supabase
+      .from('businesses')
+      .update({
+        name: form.name,
+        address: form.address,
+        phone: form.phone,
+        footer_text: form.footer_text,
+        tax_percent: Number(form.tax_percent) || 0,
+        service_percent: Number(form.service_percent) || 0,
+        discount_percent: Number(form.discount_percent) || 0,
+        rounding_enabled: form.rounding_enabled,
+        rounding_nearest: Number(form.rounding_nearest) || 100,
+        manager_pin: form.manager_pin || '1234',
+        pin_required_for_cancel: form.pin_required_for_cancel,
+        print_check_enabled: form.print_check_enabled,
+        queue_number_enabled: form.queue_number_enabled,
+        queue_start_number: Number(form.queue_start_number) || 1,
+        logo_base64: form.logo_base64 || null,
+      })
+      .eq('id', businessId);
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
   }
@@ -135,23 +130,6 @@ export default function SettingsPage() {
       <p className="text-sm text-ink/60 mb-8">
         {t('settings_intro')}
       </p>
-
-      <div className="receipt-card mb-8 flex items-center justify-between">
-        <div>
-          <p className="label-eyebrow mb-1">Current Plan</p>
-          <p className="text-lg font-semibold text-navy">{planLabel(planInfo)}</p>
-          {planInfo?.plan_expires_at && (
-            <p className="text-xs text-ink/50 mt-1">
-              {planInfo.plan === 'trial' ? 'Trial ends' : 'Renews/expires'}{' '}
-              {new Date(planInfo.plan_expires_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-              {' '}({daysRemaining(planInfo.plan_expires_at)} days left)
-            </p>
-          )}
-        </div>
-        <a href="/pricing" className="rounded-full border border-navy text-navy px-5 py-2.5 text-sm font-medium shrink-0">
-          View Plans
-        </a>
-      </div>
 
       <form onSubmit={handleSave} className="receipt-card flex flex-col gap-4">
         <p className="label-eyebrow">{t('business_profile')}</p>
@@ -263,13 +241,8 @@ export default function SettingsPage() {
           <input
             value={form.manager_pin}
             onChange={(e) => setForm({ ...form, manager_pin: e.target.value })}
-            placeholder="Leave blank to keep the current PIN"
             className="w-full rounded-lg border border-grey px-4 py-2.5 focus:border-navy outline-none"
           />
-          <p className="text-xs text-ink/50 mt-1">
-            PINs are stored as a one-way hash, not as plain text, so this field is always blank —
-            type here only when you want to set a new PIN.
-          </p>
         </div>
         <label className="flex items-center gap-2 text-sm">
           <input
@@ -308,43 +281,6 @@ export default function SettingsPage() {
             />
           </div>
         )}
-
-        <p className="label-eyebrow pt-2 border-t border-grey-light mt-2">Loyalty Points</p>
-        <div>
-          <label className="label-eyebrow block mb-1.5">Earn Rate (Rp spent per 1 point)</label>
-          <input
-            type="number"
-            value={form.points_earn_rate}
-            onChange={(e) => setForm({ ...form, points_earn_rate: e.target.value })}
-            className="w-full rounded-lg border border-grey px-4 py-2.5 focus:border-navy outline-none"
-          />
-          <p className="text-xs text-ink/50 mt-1">
-            e.g. 1000 means every Rp 1,000 spent earns 1 point (a Rp 30,000 purchase earns 30 points).
-          </p>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="label-eyebrow block mb-1.5">Redemption Value (Rp per point)</label>
-            <input
-              type="number"
-              value={form.points_redemption_value}
-              onChange={(e) => setForm({ ...form, points_redemption_value: e.target.value })}
-              className="w-full rounded-lg border border-grey px-4 py-2.5 focus:border-navy outline-none"
-            />
-          </div>
-          <div>
-            <label className="label-eyebrow block mb-1.5">Redeem in Multiples of</label>
-            <input
-              type="number"
-              value={form.points_redemption_multiple}
-              onChange={(e) => setForm({ ...form, points_redemption_multiple: e.target.value })}
-              className="w-full rounded-lg border border-grey px-4 py-2.5 focus:border-navy outline-none"
-            />
-          </div>
-        </div>
-        <p className="text-xs text-ink/50 -mt-2">
-          e.g. value 100 + multiple 300 means members redeem 300 points at a time for Rp 30,000 (10 points = Rp 1,000).
-        </p>
 
         <button type="submit" className="rounded-full bg-navy text-white py-3 font-medium mt-2">
           {t('save_changes')}
@@ -405,3 +341,6 @@ export default function SettingsPage() {
     </div>
   );
 }
+SETEOF
+
+echo 'Selesai. Jalankan migration_011 di Supabase SQL Editor, lalu npm run dev'

@@ -1,16 +1,23 @@
+cat > supabase/migration_015_points_earn_rate.sql << 'MIGEOF'
+-- Rate dapet poin (belanja berapa Rupiah = 1 poin) sekarang bisa diatur,
+-- bukan hardcode. Default 1000 = tiap Rp1.000 belanja dapet 1 poin
+-- (jadi belanja Rp30.000 = 30 poin).
+alter table businesses
+  add column if not exists points_earn_rate integer default 1000;
+MIGEOF
+
+cat > src/app/dashboard/settings/page.tsx << 'SETEOF'
 'use client';
 
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useI18n } from '@/lib/i18n';
 import { hashPin } from '@/lib/hash';
-import { planLabel, daysRemaining, type PlanInfo } from '@/lib/plan';
 
 export default function SettingsPage() {
   const supabase = createClient();
   const { t, lang, setLang } = useI18n();
   const [businessId, setBusinessId] = useState<string | null>(null);
-  const [planInfo, setPlanInfo] = useState<PlanInfo | null>(null);
   const [syncApiKey, setSyncApiKey] = useState<string>('');
   const [form, setForm] = useState({
     name: '',
@@ -48,7 +55,6 @@ export default function SettingsPage() {
       const { data: business } = await supabase.from('businesses').select('*').eq('id', link.business_id).single();
       if (business) {
         setBusinessId(business.id);
-        setPlanInfo({ plan: business.plan, plan_expires_at: business.plan_expires_at });
         setSyncApiKey(business.sync_api_key ?? '');
         setForm({
           name: business.name ?? '',
@@ -135,23 +141,6 @@ export default function SettingsPage() {
       <p className="text-sm text-ink/60 mb-8">
         {t('settings_intro')}
       </p>
-
-      <div className="receipt-card mb-8 flex items-center justify-between">
-        <div>
-          <p className="label-eyebrow mb-1">Current Plan</p>
-          <p className="text-lg font-semibold text-navy">{planLabel(planInfo)}</p>
-          {planInfo?.plan_expires_at && (
-            <p className="text-xs text-ink/50 mt-1">
-              {planInfo.plan === 'trial' ? 'Trial ends' : 'Renews/expires'}{' '}
-              {new Date(planInfo.plan_expires_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-              {' '}({daysRemaining(planInfo.plan_expires_at)} days left)
-            </p>
-          )}
-        </div>
-        <a href="/pricing" className="rounded-full border border-navy text-navy px-5 py-2.5 text-sm font-medium shrink-0">
-          View Plans
-        </a>
-      </div>
 
       <form onSubmit={handleSave} className="receipt-card flex flex-col gap-4">
         <p className="label-eyebrow">{t('business_profile')}</p>
@@ -405,3 +394,6 @@ export default function SettingsPage() {
     </div>
   );
 }
+SETEOF
+
+echo 'Selesai. Jalankan migration_015 di Supabase SQL Editor, lalu npm run dev'

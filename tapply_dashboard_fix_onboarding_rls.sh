@@ -1,3 +1,4 @@
+cat > src/app/onboarding/page.tsx << 'ONBOARDEOF'
 'use client';
 
 import { useState } from 'react';
@@ -112,3 +113,6 @@ export default function OnboardingPage() {
     </main>
   );
 }
+ONBOARDEOF
+
+echo 'Selesai. Restart server: Ctrl+C lalu npm run dev'
