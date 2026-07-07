@@ -43,7 +43,7 @@ function getPresetRange(period: Period): { from: Date; to: Date } {
   return { from, to };
 }
 
-const CHART_NAVY = '#092762';
+const CHART_NAVY = '#623609';
 const CHART_SAGE = '#5B8266';
 const CHART_RUST = '#B54834';
 

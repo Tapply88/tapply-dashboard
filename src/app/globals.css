@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 html {
-  background: #F7F6F2;
+  background: #D6CFC6;
 }
 
 body {
@@ -28,7 +28,7 @@ body {
   left: 16px;
   right: 16px;
   height: 0;
-  border-top: 1.5px dashed #CFCFCF;
+  border-top: 1.5px dashed #C4BBAF;
 }
 
 .receipt-card::before {
@@ -55,7 +55,7 @@ body {
 
 /* Focus visibility */
 :focus-visible {
-  outline: 2px solid #092762;
+  outline: 2px solid #623609;
   outline-offset: 2px;
 }
 

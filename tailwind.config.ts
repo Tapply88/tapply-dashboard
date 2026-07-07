@@ -1,22 +1,21 @@
 import type { Config } from 'tailwindcss';
-
 const config: Config = {
   content: ['./src/**/*.{js,ts,jsx,tsx,mdx}'],
   theme: {
     extend: {
       colors: {
         navy: {
-          DEFAULT: '#092762',
-          soft: '#1B3A7A',
-          50: '#EDF0F7',
+          DEFAULT: '#623609',
+          soft: '#8B5A2E',
+          50: '#F0E7DE',
         },
-        cream: '#F7F6F2',
+        cream: '#D6CFC6',
         paper: '#FFFFFF',
         grey: {
-          DEFAULT: '#CFCFCF',
-          light: '#E8E8E6',
+          DEFAULT: '#C4BBAF',
+          light: '#E6DED4',
         },
-        ink: '#1A1A1A',
+        ink: '#2A1D12',
         sage: {
           DEFAULT: '#5B8266',
           light: '#EAF1EC',
@@ -38,5 +37,4 @@ const config: Config = {
   },
   plugins: [],
 };
-
 export default config;

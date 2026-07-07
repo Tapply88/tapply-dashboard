@@ -10,7 +10,7 @@ type Business = {
   created_at: string;
 };
 
-const navy = '#092762';
+const navy = '#623609';
 
 export default function AdminDashboard() {
   const [businesses, setBusinesses] = useState<Business[]>([]);
