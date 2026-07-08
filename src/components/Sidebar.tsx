@@ -13,6 +13,7 @@ export function Sidebar() {
     { href: '/dashboard', label: t('nav_overview'), icon: '◧' },
     { href: '/dashboard/products', label: t('nav_products'), icon: '☰' },
     { href: '/dashboard/variants', label: t('nav_variants'), icon: '⊕' },
+    { href: '/dashboard/ingredients', label: t('nav_ingredients'), icon: '🌿' },
     { href: '/dashboard/staff', label: t('nav_staff'), icon: '☺' },
     { href: '/dashboard/promos', label: t('nav_promos'), icon: '◈' },
     { href: '/dashboard/members', label: t('nav_members'), icon: '◎' },
