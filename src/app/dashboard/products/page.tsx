@@ -27,6 +27,8 @@ type Product = {
 
 type Variation = { id: string; name: string };
 type Addon = { id: string; name: string; price: number };
+type Ingredient = { id: string; name: string; unit: string };
+type RecipeItem = { id: string; ingredient_id: string; quantity: number };
 
 function formatRupiah(amount: number) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(amount);
@@ -65,6 +67,9 @@ export default function ProductsPage() {
   const [importing, setImporting] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const [ingredientsMaster, setIngredientsMaster] = useState<Ingredient[]>([]);
+  const [recipeItems, setRecipeItems] = useState<RecipeItem[]>([]);
+  const [recipeLoading, setRecipeLoading] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -79,14 +84,16 @@ export default function ProductsPage() {
         if (business) setPlanInfo({ plan: business.plan, plan_expires_at: business.plan_expires_at });
       }
     }
-    const [{ data: productData }, { data: variationData }, { data: addonData }] = await Promise.all([
+    const [{ data: productData }, { data: variationData }, { data: addonData }, { data: ingredientData }] = await Promise.all([
       supabase.from('products').select('*').order('name'),
       supabase.from('variations').select('id, name').order('sort_order'),
       supabase.from('addons').select('id, name, price').order('sort_order'),
+      supabase.from('ingredients').select('id, name, unit').order('name'),
     ]);
     setProducts(productData ?? []);
     setVariations(variationData ?? []);
     setAddons(addonData ?? []);
+    setIngredientsMaster(ingredientData ?? []);
     setLoading(false);
   }, [supabase]);
 
@@ -151,10 +158,11 @@ export default function ProductsPage() {
   function openAddForm() {
     setEditing(null);
     setForm(emptyForm);
+    setRecipeItems([]);
     setShowForm(true);
   }
 
-  function openEditForm(p: Product) {
+  async function openEditForm(p: Product) {
     setEditing(p);
     setForm({
       name: p.name,
@@ -173,6 +181,10 @@ export default function ProductsPage() {
       online_price: p.online_price != null ? String(p.online_price) : '',
     });
     setShowForm(true);
+    setRecipeLoading(true);
+    const { data } = await supabase.from('recipe_items').select('id, ingredient_id, quantity').eq('product_id', p.id);
+    setRecipeItems(data ?? []);
+    setRecipeLoading(false);
   }
 
   function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -228,6 +240,26 @@ export default function ProductsPage() {
     if (!confirm('Delete this product?')) return;
     await supabase.from('products').delete().eq('id', id);
     loadData();
+  }
+
+  async function addRecipeItem(ingredientId: string) {
+    if (!editing || !businessId || !ingredientId) return;
+    const { data } = await supabase
+      .from('recipe_items')
+      .insert({ product_id: editing.id, ingredient_id: ingredientId, quantity: 0, business_id: businessId })
+      .select('id, ingredient_id, quantity')
+      .single();
+    if (data) setRecipeItems((prev) => [...prev, data]);
+  }
+
+  async function updateRecipeQty(id: string, quantity: number) {
+    await supabase.from('recipe_items').update({ quantity }).eq('id', id);
+    setRecipeItems((prev) => prev.map((r) => (r.id === id ? { ...r, quantity } : r)));
+  }
+
+  async function deleteRecipeItem(id: string) {
+    await supabase.from('recipe_items').delete().eq('id', id);
+    setRecipeItems((prev) => prev.filter((r) => r.id !== id));
   }
 
   return (
@@ -457,6 +489,68 @@ export default function ProductsPage() {
               />
             </div>
           </div>
+
+          {editing ? (
+            <div className="pt-2 border-t border-grey-light">
+              <label className="label-eyebrow block mb-1.5 mt-3">Recipe (Raw Materials)</label>
+              <p className="text-xs text-ink/50 mb-3">
+                If this product uses ingredients, add them here. Stock for this product is then tracked automatically
+                from ingredient stock instead of the Stock field above.
+              </p>
+              {recipeLoading ? (
+                <p className="text-xs text-ink/40">Loading recipe...</p>
+              ) : (
+                <>
+                  <div className="flex flex-col gap-2 mb-3">
+                    {recipeItems.length === 0 && <p className="text-xs text-ink/40">No ingredients linked yet.</p>}
+                    {recipeItems.map((r) => {
+                      const ing = ingredientsMaster.find((i) => i.id === r.ingredient_id);
+                      return (
+                        <div key={r.id} className="flex items-center gap-2 text-sm">
+                          <span className="flex-1">{ing?.name ?? 'Unknown ingredient'}</span>
+                          <input
+                            type="number"
+                            value={r.quantity}
+                            onChange={(e) => updateRecipeQty(r.id, Number(e.target.value) || 0)}
+                            className="w-24 rounded-lg border border-grey px-2 py-1.5 text-sm text-right outline-none focus:border-navy"
+                          />
+                          <span className="text-xs text-ink/50 w-10">{ing?.unit ?? ''}</span>
+                          <button type="button" onClick={() => deleteRecipeItem(r.id)} className="text-rust text-xs font-medium">
+                            Delete
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {ingredientsMaster.length === 0 ? (
+                    <p className="text-xs text-ink/40">No ingredients yet. Add some on the Ingredients page first.</p>
+                  ) : (
+                    <select
+                      defaultValue=""
+                      onChange={(e) => {
+                        if (e.target.value) addRecipeItem(e.target.value);
+                        e.target.value = '';
+                      }}
+                      className="w-full rounded-lg border border-grey px-3 py-2 text-sm focus:border-navy outline-none"
+                    >
+                      <option value="">+ Add ingredient to recipe...</option>
+                      {ingredientsMaster
+                        .filter((i) => !recipeItems.some((r) => r.ingredient_id === i.id))
+                        .map((i) => (
+                          <option key={i.id} value={i.id}>
+                            {i.name} ({i.unit})
+                          </option>
+                        ))}
+                    </select>
+                  )}
+                </>
+              )}
+            </div>
+          ) : (
+            <p className="text-xs text-ink/40 pt-2 border-t border-grey-light">
+              Save this product first, then reopen it to add a recipe.
+            </p>
+          )}
 
           <div className="flex gap-3 pt-2">
             <button type="submit" className="rounded-full bg-navy text-white px-5 py-2.5 text-sm font-medium">
