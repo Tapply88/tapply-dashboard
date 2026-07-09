@@ -11,6 +11,7 @@ export function Sidebar() {
 
   const NAV_ITEMS = [
     { href: '/dashboard', label: t('nav_overview'), icon: '◧' },
+    { href: '/dashboard/reports', label: t('nav_reports'), icon: '📊' },
     { href: '/dashboard/products', label: t('nav_products'), icon: '☰' },
     { href: '/dashboard/variants', label: t('nav_variants'), icon: '⊕' },
     { href: '/dashboard/ingredients', label: t('nav_ingredients'), icon: '🌿' },
@@ -18,7 +19,6 @@ export function Sidebar() {
     { href: '/dashboard/promos', label: t('nav_promos'), icon: '◈' },
     { href: '/dashboard/members', label: t('nav_members'), icon: '◎' },
     { href: '/dashboard/shifts', label: t('nav_shifts'), icon: '◷' },
-    { href: '/dashboard/reports', label: t('nav_reports'), icon: '📊' },
     { href: '/dashboard/settings', label: t('nav_settings'), icon: '⚙' },
   ];
 

@@ -7,7 +7,6 @@ import { ReceiptStatCard } from '@/components/ReceiptStatCard';
 import { useI18n } from '@/lib/i18n';
 import { isProActive, type PlanInfo } from '@/lib/plan';
 import { UpgradeLock } from '@/components/UpgradeLock';
-import { SalesReportsSection } from '@/components/SalesReportsSection';
 
 type Period = 'today' | 'week' | 'month' | 'custom';
 
@@ -366,9 +365,6 @@ export default function DashboardHomePage() {
           ) : (
             <UpgradeLock feature="Sales by category" />
           )}
-          <div className="mt-8">
-            <SalesReportsSection />
-          </div>
         </>
       )}
     </div>
