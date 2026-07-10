@@ -15,6 +15,5 @@ create index if not exists receipt_feedback_transaction_id_idx on receipt_feedba
 
 alter table receipt_feedback enable row level security;
 
--- Dashboard (business owner) boleh lihat feedback bisnisnya sendiri.
 create policy "tenant select" on receipt_feedback for select
   using (business_id in (select business_id from business_users where user_id = auth.uid()));
