@@ -12,6 +12,7 @@ const DICTIONARY: Record<string, { en: string; id: string }> = {
   nav_variants: { en: 'Variants & Add-ons', id: 'Varian & Tambahan' },
   nav_reports: { en: 'Reports', id: 'Laporan' },
   nav_ingredients: { en: 'Ingredients', id: 'Bahan Baku' },
+  nav_tables: { en: 'Tables', id: 'Meja' },
   nav_staff: { en: 'Staff', id: 'Staf' },
   nav_promos: { en: 'Promo', id: 'Promo' },
   nav_members: { en: 'Members', id: 'Member' },
