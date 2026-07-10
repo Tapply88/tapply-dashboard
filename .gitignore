@@ -5,3 +5,12 @@ out/
 .env
 *.log
 .DS_Store
+
+# Scratch scripts & build artifacts (dari sesi Claude, sekali pakai)
+*.tsbuildinfo
+tapply_dashboard_*.sh
+fix_*.py
+apply_*.sh
+push_*.sh
+save_*.sh
+deploy_*.sh
