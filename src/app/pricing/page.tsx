@@ -36,6 +36,8 @@ const TIERS = [
       'Full reporting: trends, period comparison & CSV export',
       'Member accounts & loyalty points',
       'Label printing & CSV menu import',
+      'Recipe & ingredient management with auto stock deduction',
+      'Table management with visual floor view',
     ],
     cta: 'Get Started',
     href: '/signup',
