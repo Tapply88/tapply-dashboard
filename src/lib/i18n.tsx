@@ -13,6 +13,7 @@ const DICTIONARY: Record<string, { en: string; id: string }> = {
   nav_reports: { en: 'Reports', id: 'Laporan' },
   nav_ingredients: { en: 'Ingredients', id: 'Bahan Baku' },
   nav_tables: { en: 'Tables', id: 'Meja' },
+  nav_billing: { en: 'Billing', id: 'Tagihan' },
   nav_staff: { en: 'Staff', id: 'Staf' },
   nav_promos: { en: 'Promo', id: 'Promo' },
   nav_members: { en: 'Members', id: 'Member' },
