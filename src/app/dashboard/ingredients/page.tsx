@@ -1,6 +1,8 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { isProActive, type PlanInfo } from '@/lib/plan';
+import { UpgradeLock } from '@/components/UpgradeLock';
 
 type Ingredient = {
   id: string;
@@ -17,6 +19,7 @@ export default function IngredientsPage() {
   const [businessId, setBusinessId] = useState<string | null>(null);
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [loading, setLoading] = useState(true);
+  const [planInfo, setPlanInfo] = useState<PlanInfo | null>(null);
   const [newName, setNewName] = useState('');
   const [newUnit, setNewUnit] = useState('gram');
   const [newStock, setNewStock] = useState('0');
@@ -29,7 +32,11 @@ export default function IngredientsPage() {
     } = await supabase.auth.getUser();
     if (user) {
       const { data: link } = await supabase.from('business_users').select('business_id').eq('user_id', user.id).single();
-      if (link) setBusinessId(link.business_id);
+      if (link) {
+        setBusinessId(link.business_id);
+        const { data: business } = await supabase.from('businesses').select('plan, plan_expires_at').eq('id', link.business_id).single();
+        if (business) setPlanInfo({ plan: business.plan, plan_expires_at: business.plan_expires_at });
+      }
     }
     const { data } = await supabase.from('ingredients').select('*').order('name');
     setIngredients(data ?? []);
@@ -66,6 +73,16 @@ export default function IngredientsPage() {
   }
 
   if (loading) return <p className="text-sm text-ink/50">Loading...</p>;
+
+  if (planInfo && !isProActive(planInfo)) {
+    return (
+      <div className="max-w-2xl">
+        <p className="label-eyebrow mb-2">Raw Materials</p>
+        <h1 className="text-2xl font-semibold mb-8">Ingredients</h1>
+        <UpgradeLock feature="Recipe & ingredient management" />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl">
